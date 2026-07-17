@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import type { Post, Slide, GenerateInput, Archetype, Tone } from "@/lib/types";
 import { ARCHETYPES, TONES } from "@/lib/types";
 import type { CoverVariants } from "@/agent/generate-covers";
+import type { CoverScore } from "@/agent/score-cover";
 
 const ARCHETYPE_LABELS: Record<Archetype, string> = {
   auto: "Auto (agent picks)",
@@ -50,6 +51,9 @@ export default function HomePage() {
   const [covers, setCovers] = useState<CoverVariants | null>(null);
   const [coversLoading, setCoversLoading] = useState(false);
   const [regeneratingIdx, setRegeneratingIdx] = useState<number | null>(null);
+  const [score, setScore] = useState<CoverScore | null>(null);
+  const [scoreLoading, setScoreLoading] = useState(false);
+  const [scoreExpanded, setScoreExpanded] = useState(false);
 
   const loadHistory = useCallback(async () => {
     try {
@@ -83,8 +87,8 @@ export default function HomePage() {
       if (data.ok) {
         setPost(data.data);
         loadHistory();
-        // Fire cover generation in parallel (non-blocking)
         fetchCovers(scenario, archetype, tone);
+        fetchScore(data.data.slides[0]?.headline ?? "");
       } else {
         setError(data.error || "Generation failed");
       }
@@ -120,6 +124,7 @@ export default function HomePage() {
       ...post,
       slides: post.slides.map((s, i) => (i === 0 ? { ...s, headline } : s)),
     });
+    fetchScore(headline);
   };
 
   const handleRegenerateSlide = async (idx: number) => {
@@ -134,6 +139,7 @@ export default function HomePage() {
       const data = await res.json();
       if (data.ok) {
         updateSlide(idx, data.data);
+        if (idx === 0) fetchScore(data.data.headline);
       } else {
         setError(data.error || "Regeneration failed");
       }
@@ -141,6 +147,25 @@ export default function HomePage() {
       setError(e instanceof Error ? e.message : "Network error");
     } finally {
       setRegeneratingIdx(null);
+    }
+  };
+
+  const fetchScore = async (headline: string) => {
+    if (!post) return;
+    setScoreLoading(true);
+    setScoreExpanded(false);
+    try {
+      const res = await fetch("/api/score-cover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ headline, scenario, archetype: post.archetype ?? "auto" }),
+      });
+      const data = await res.json();
+      if (data.ok) setScore(data.data);
+    } catch {
+      // score is optional
+    } finally {
+      setScoreLoading(false);
     }
   };
 
@@ -330,6 +355,58 @@ export default function HomePage() {
                 <span className="text-[var(--muted)]">·</span>
                 <span className="text-[var(--muted)]">{post.topic}</span>
               </div>
+
+              {/* Hook strength score */}
+              {scoreLoading && (
+                <p className="text-sm text-[var(--muted)]">Scoring cover hook…</p>
+              )}
+              {score && !scoreLoading && (
+                <div className="border border-[var(--divider)] rounded-lg p-3 bg-white">
+                  <button
+                    onClick={() => setScoreExpanded(!scoreExpanded)}
+                    className="w-full flex items-center justify-between"
+                  >
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                      Hook strength
+                    </span>
+                    <span
+                      className={`text-lg font-bold ${
+                        score.score >= 7
+                          ? "text-green-700"
+                          : score.score >= 5
+                            ? "text-amber-600"
+                            : "text-red-700"
+                      }`}
+                    >
+                      {score.score}/10
+                    </span>
+                  </button>
+                  {scoreExpanded && (
+                    <div className="mt-3 space-y-2 text-sm">
+                      {score.strengths.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-green-700 mb-1">Strengths</p>
+                          <ul className="list-disc list-inside text-[var(--text)]">
+                            {score.strengths.map((s, i) => (
+                              <li key={i}>{s}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {score.improvements.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-amber-600 mb-1">Improvements</p>
+                          <ul className="list-disc list-inside text-[var(--text)]">
+                            {score.improvements.map((s, i) => (
+                              <li key={i}>{s}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* A/B cover picker */}
               {coversLoading && (
