@@ -49,6 +49,7 @@ export default function HomePage() {
   const [history, setHistory] = useState<{ id: string; post: Post }[]>([]);
   const [covers, setCovers] = useState<CoverVariants | null>(null);
   const [coversLoading, setCoversLoading] = useState(false);
+  const [regeneratingIdx, setRegeneratingIdx] = useState<number | null>(null);
 
   const loadHistory = useCallback(async () => {
     try {
@@ -119,6 +120,28 @@ export default function HomePage() {
       ...post,
       slides: post.slides.map((s, i) => (i === 0 ? { ...s, headline } : s)),
     });
+  };
+
+  const handleRegenerateSlide = async (idx: number) => {
+    if (!post) return;
+    setRegeneratingIdx(idx);
+    try {
+      const res = await fetch("/api/regenerate-slide", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ post, slideIdx: idx }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        updateSlide(idx, data.data);
+      } else {
+        setError(data.error || "Regeneration failed");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setRegeneratingIdx(null);
+    }
   };
 
   const handleDownloadPdf = async () => {
@@ -375,9 +398,18 @@ export default function HomePage() {
                       <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
                         {isCover ? "Cover" : isClosing ? "Closing" : `Slide ${idx + 1}`}
                       </span>
-                      <span className="text-xs text-[var(--muted)]">
-                        {String(idx + 1).padStart(2, "0")} / {String(post.slides.length).padStart(2, "0")}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handleRegenerateSlide(idx)}
+                          disabled={regeneratingIdx === idx}
+                          className="text-xs text-[var(--muted)] hover:text-[var(--text)] underline disabled:opacity-50"
+                        >
+                          {regeneratingIdx === idx ? "Regenerating…" : "↻ Regenerate"}
+                        </button>
+                        <span className="text-xs text-[var(--muted)]">
+                          {String(idx + 1).padStart(2, "0")} / {String(post.slides.length).padStart(2, "0")}
+                        </span>
+                      </div>
                     </div>
                     <input
                       type="text"
