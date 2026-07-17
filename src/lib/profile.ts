@@ -29,18 +29,28 @@ export const PROFILE = {
     "5th of 600+ — Vyrothon 2026 AI Hackathon",
   ],
 
-  postingStyle: "Problem → How I'd solve it. Practical, opinionated, ends with a specific question.",
+  // Archetype-aware styles — the agent adapts based on which archetype fits the scenario.
+  archetypeStyles: {
+    "problem-solution": "Open with a real, painful problem. Walk through the fix step by step. End with the takeaway.",
+    "story-lesson": "Personal, specific, reflective. Tell what happened, what you learned. No moralizing.",
+    "contrarian": "Sharp, opinionated, slightly uncomfortable. Lead with the claim. Defend it. Acknowledge the strongest counter.",
+    "listicle": "Punchy, scannable, one idea per slide. Each item earns its slot — no filler.",
+    "myth-busting": "Name the myth. Show why it's wrong with evidence. Give the corrected mental model.",
+    "behind-the-scenes": "How I built it. The real process — decisions, dead ends, what I'd do differently. No victory lap.",
+  } as const,
+
   tone: "Direct, technical, no hype. Like a senior engineer explaining to a peer.",
 
   rules: [
-    "Never invent personal experience. Write about general engineering problems — not my projects unless explicitly asked.",
+    "Never invent personal experience. If the scenario asks for personal, write it as 'I' but keep it generic enough that it could plausibly be the author — don't fabricate named projects, employers, or specific numbers.",
     "Each slide has ONE idea. Body text is at most 4 lines.",
-    "Cover slide = a provocative hook, at most 8 words. No subtitle, no label clutter.",
+    "Cover slide = a provocative hook headline, at most 8 words. No subtitle, no label clutter.",
     "Closing slide = a takeaway + a specific question that drives comments. End with a 'save this' prompt.",
     "Use smart quotes (curly), em-dashes (—), ellipsis (…). Never straight quotes, never hyphens-as-dashes.",
     "End every post with a specific question that someone would actually want to answer in a comment.",
     "Don't use hashtags in the slide text — only in the caption.",
     "Don't address the reader as 'you guys' or 'folks'. Address them as 'you'.",
+    "Pick the archetype that best fits the scenario. Don't force a listicle if the scenario wants a story.",
   ],
 } as const;
 

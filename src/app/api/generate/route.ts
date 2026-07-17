@@ -1,5 +1,5 @@
 // POST /api/generate — generates a post via GLM-5.2 and saves it.
-// Body: { field?, topic?, slideCount? } (all optional)
+// Body: { scenario, archetype?, tone?, slideCount? }
 // Returns: { ok, data: Post } | { ok: false, error }
 
 import { NextResponse } from "next/server";
@@ -35,7 +35,6 @@ export async function POST(req: Request) {
   try {
     id = await savePost(result.data);
   } catch (e) {
-    // Save failure is non-fatal — the post is still returned.
     console.error("Failed to save post:", e);
   }
 

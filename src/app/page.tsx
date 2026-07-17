@@ -1,17 +1,26 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import type { Post, Slide, GenerateInput } from "@/lib/types";
+import type { Post, Slide, GenerateInput, Archetype, Tone } from "@/lib/types";
+import { ARCHETYPES, TONES } from "@/lib/types";
 
-type Field = GenerateInput["field"];
+const ARCHETYPE_LABELS: Record<Archetype, string> = {
+  auto: "Auto (agent picks)",
+  "problem-solution": "Problem → Solution",
+  "story-lesson": "Story / Lesson",
+  contrarian: "Contrarian take",
+  listicle: "Listicle",
+  "myth-busting": "Myth busting",
+  "behind-the-scenes": "Behind the scenes",
+};
 
-const FIELDS: { value: Field; label: string }[] = [
-  { value: "auto", label: "Auto-rotate" },
-  { value: "AI / LLM engineering", label: "AI / LLM engineering" },
-  { value: "Full-stack / backend", label: "Full-stack / backend" },
-  { value: "Dev productivity / tooling", label: "Dev productivity / tooling" },
-  { value: "Career / SWE lessons", label: "Career / SWE lessons" },
-];
+const TONE_LABELS: Record<Tone, string> = {
+  direct: "Direct",
+  casual: "Casual",
+  authoritative: "Authoritative",
+  provocative: "Provocative",
+  reflective: "Reflective",
+};
 
 const SLIDE_COUNTS = [5, 6, 7, 8];
 
@@ -19,9 +28,18 @@ const SECTION_COLORS = [
   "#A0502E", "#B8860B", "#6B3D8B", "#1E6343", "#166B6B", "#8B2C38",
 ];
 
+const SCENARIO_PLACEHOLDERS = [
+  "why I stopped using ORMs after 5 years",
+  "my first CTF — what I learned losing in the finals",
+  "a contrarian take: RAG is overrated for most use cases",
+  "work-life balance as a developer in Pakistan",
+  "how I debugged a 3-day mystery bug",
+];
+
 export default function HomePage() {
-  const [field, setField] = useState<Field>("auto");
-  const [topic, setTopic] = useState("");
+  const [scenario, setScenario] = useState("");
+  const [archetype, setArchetype] = useState<Archetype>("auto");
+  const [tone, setTone] = useState<Tone>("direct");
   const [slideCount, setSlideCount] = useState(6);
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(false);
@@ -44,13 +62,17 @@ export default function HomePage() {
   }, [loadHistory]);
 
   const handleGenerate = async () => {
+    if (scenario.trim().length < 5) {
+      setError("Scenario must be at least 5 characters.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ field, topic: topic || undefined, slideCount }),
+        body: JSON.stringify({ scenario, archetype, tone, slideCount } satisfies GenerateInput),
       });
       const data = await res.json();
       if (data.ok) {
@@ -109,8 +131,9 @@ export default function HomePage() {
 
   const loadPost = (p: Post) => {
     setPost(p);
-    setField(p.field as Field);
   };
+
+  const placeholder = SCENARIO_PLACEHOLDERS[new Date().getDate() % SCENARIO_PLACEHOLDERS.length];
 
   return (
     <div className="min-h-screen flex">
@@ -118,22 +141,38 @@ export default function HomePage() {
       <aside className="w-80 border-r border-[var(--divider)] p-6 flex flex-col gap-6 overflow-y-auto h-screen sticky top-0">
         <div>
           <h1 className="text-xl font-bold mb-1">LinkedIn Post Agent</h1>
-          <p className="text-sm text-[var(--muted)]">Generate carousels in your style.</p>
+          <p className="text-sm text-[var(--muted)]">Describe a scenario. Get a carousel.</p>
         </div>
 
         <div className="flex flex-col gap-4">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2">
-              Field
+              Scenario
+            </label>
+            <textarea
+              value={scenario}
+              onChange={(e) => setScenario(e.target.value)}
+              placeholder={placeholder}
+              rows={5}
+              className="w-full border border-[var(--divider)] rounded-md px-3 py-2 text-sm bg-white resize-y"
+            />
+            <p className="text-xs text-[var(--muted)] mt-1">
+              {scenario.length}/500 characters
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2">
+              Archetype
             </label>
             <select
-              value={field}
-              onChange={(e) => setField(e.target.value as Field)}
+              value={archetype}
+              onChange={(e) => setArchetype(e.target.value as Archetype)}
               className="w-full border border-[var(--divider)] rounded-md px-3 py-2 text-sm bg-white"
             >
-              {FIELDS.map((f) => (
-                <option key={f.value} value={f.value}>
-                  {f.label}
+              {ARCHETYPES.map((a) => (
+                <option key={a} value={a}>
+                  {ARCHETYPE_LABELS[a]}
                 </option>
               ))}
             </select>
@@ -141,15 +180,19 @@ export default function HomePage() {
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2">
-              Topic (optional)
+              Tone
             </label>
-            <input
-              type="text"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g. prompt injection"
+            <select
+              value={tone}
+              onChange={(e) => setTone(e.target.value as Tone)}
               className="w-full border border-[var(--divider)] rounded-md px-3 py-2 text-sm bg-white"
-            />
+            >
+              {TONES.map((t) => (
+                <option key={t} value={t}>
+                  {TONE_LABELS[t]}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -175,7 +218,7 @@ export default function HomePage() {
 
           <button
             onClick={handleGenerate}
-            disabled={loading}
+            disabled={loading || scenario.trim().length < 5}
             className="w-full py-3 rounded-md font-semibold text-sm bg-[var(--accent)] text-white hover:opacity-90 disabled:opacity-50 transition"
           >
             {loading ? "Generating…" : "Generate post"}
@@ -199,7 +242,9 @@ export default function HomePage() {
                     className="w-full text-left p-2 rounded-md hover:bg-white border border-transparent hover:border-[var(--divider)] transition"
                   >
                     <p className="text-sm font-medium truncate">{p.topic}</p>
-                    <p className="text-xs text-[var(--muted)]">{p.field}</p>
+                    <p className="text-xs text-[var(--muted)]">
+                      {p.field} · {p.archetype ?? "—"}
+                    </p>
                   </button>
                 </li>
               ))}
@@ -214,13 +259,22 @@ export default function HomePage() {
           <div className="flex flex-col items-center justify-center h-full text-center">
             <h2 className="text-2xl font-bold mb-2">No post yet</h2>
             <p className="text-[var(--muted)]">
-              Pick a field, optionally add a topic, and click Generate.
+              Describe a scenario on the left, pick an archetype, and click Generate.
             </p>
           </div>
         ) : (
           <div className="flex gap-8 max-w-6xl">
             {/* Editor */}
             <div className="flex-1 flex flex-col gap-6">
+              <div className="flex items-center gap-3 text-sm">
+                <span className="px-2 py-1 rounded bg-[var(--divider)] text-[var(--text)] font-medium">
+                  {post.archetype ?? "—"}
+                </span>
+                <span className="text-[var(--muted)]">{post.field}</span>
+                <span className="text-[var(--muted)]">·</span>
+                <span className="text-[var(--muted)]">{post.topic}</span>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2">
                   Caption
@@ -278,7 +332,7 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* Preview — first slide */}
+            {/* Preview — cover */}
             <div className="w-[432px] flex-shrink-0">
               <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-3">
                 Preview (cover)

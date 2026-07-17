@@ -21,7 +21,7 @@ export async function generatePost(input: GenerateInput): Promise<Result<Post>> 
   const model = getModel("zai-org/GLM-5.2");
   const topics = await recentTopics(5);
 
-  const system = buildSystemPrompt();
+  const system = buildSystemPrompt(input.tone);
   const user = buildUserPrompt(input, topics);
 
   const result = await parseStructured(

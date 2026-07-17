@@ -3,6 +3,26 @@
 
 import { z } from "zod";
 
+export const ARCHETYPES = [
+  "auto",
+  "problem-solution",
+  "story-lesson",
+  "contrarian",
+  "listicle",
+  "myth-busting",
+  "behind-the-scenes",
+] as const;
+export type Archetype = (typeof ARCHETYPES)[number];
+
+export const TONES = [
+  "direct",
+  "casual",
+  "authoritative",
+  "provocative",
+  "reflective",
+] as const;
+export type Tone = (typeof TONES)[number];
+
 export const SlideSchema = z.object({
   headline: z
     .string()
@@ -24,12 +44,15 @@ export const PostSchema = z.object({
     .describe("A 3-4 line teaser for the LinkedIn post body. Ends with an arrow ↓ to point at the carousel."),
   field: z
     .string()
-    .describe("Which of the author's fields this post belongs to."),
+    .describe("Which of the author's fields this post belongs to (e.g. 'AI / LLM engineering')."),
   topic: z
     .string()
     .min(2)
     .max(120)
     .describe("The specific topic of this post, e.g. 'N+1 query problem' or 'prompt injection'."),
+  archetype: z
+    .string()
+    .describe("The archetype the post ended up using (e.g. 'problem-solution')."),
   slides: z
     .array(SlideSchema)
     .min(5)
@@ -42,10 +65,13 @@ export type Post = z.infer<typeof PostSchema>;
 
 // What the UI sends to the generate endpoint
 export const GenerateInputSchema = z.object({
-  field: z
-    .enum(["auto", "AI / LLM engineering", "Full-stack / backend", "Dev productivity / tooling", "Career / SWE lessons"])
-    .default("auto"),
-  topic: z.string().max(120).optional(),
+  scenario: z
+    .string()
+    .min(5)
+    .max(500)
+    .describe("Free-text scenario. Anything — technical, personal, opinion, listicle."),
+  archetype: z.enum(ARCHETYPES).default("auto"),
+  tone: z.enum(TONES).default("direct"),
   slideCount: z.number().int().min(5).max(8).default(6),
 });
 
