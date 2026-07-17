@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import type { Post, Slide, GenerateInput, Archetype, Tone } from "@/lib/types";
 import { ARCHETYPES, TONES } from "@/lib/types";
+import type { CoverVariants } from "@/agent/generate-covers";
 
 const ARCHETYPE_LABELS: Record<Archetype, string> = {
   auto: "Auto (agent picks)",
@@ -46,6 +47,8 @@ export default function HomePage() {
   const [error, setError] = useState("");
   const [pdfLoading, setPdfLoading] = useState(false);
   const [history, setHistory] = useState<{ id: string; post: Post }[]>([]);
+  const [covers, setCovers] = useState<CoverVariants | null>(null);
+  const [coversLoading, setCoversLoading] = useState(false);
 
   const loadHistory = useCallback(async () => {
     try {
@@ -68,6 +71,7 @@ export default function HomePage() {
     }
     setLoading(true);
     setError("");
+    setCovers(null);
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -78,6 +82,8 @@ export default function HomePage() {
       if (data.ok) {
         setPost(data.data);
         loadHistory();
+        // Fire cover generation in parallel (non-blocking)
+        fetchCovers(scenario, archetype, tone);
       } else {
         setError(data.error || "Generation failed");
       }
@@ -86,6 +92,33 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchCovers = async (scn: string, arch: Archetype, tn: Tone) => {
+    setCoversLoading(true);
+    try {
+      const res = await fetch("/api/covers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scenario: scn, archetype: arch, tone: tn }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setCovers(data.data);
+      }
+    } catch {
+      // covers are optional — don't show error
+    } finally {
+      setCoversLoading(false);
+    }
+  };
+
+  const applyCover = (headline: string) => {
+    if (!post) return;
+    setPost({
+      ...post,
+      slides: post.slides.map((s, i) => (i === 0 ? { ...s, headline } : s)),
+    });
   };
 
   const handleDownloadPdf = async () => {
@@ -274,6 +307,47 @@ export default function HomePage() {
                 <span className="text-[var(--muted)]">·</span>
                 <span className="text-[var(--muted)]">{post.topic}</span>
               </div>
+
+              {/* A/B cover picker */}
+              {coversLoading && (
+                <p className="text-sm text-[var(--muted)]">Generating cover variants…</p>
+              )}
+              {covers && !coversLoading && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                      Cover variants — click to use
+                    </label>
+                    <button
+                      onClick={() => fetchCovers(scenario, archetype, tone)}
+                      className="text-xs text-[var(--muted)] hover:text-[var(--text)] underline"
+                    >
+                      ↻ Regenerate
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {covers.variants.map((v, i) => {
+                      const isActive = post.slides[0]?.headline === v.headline;
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => applyCover(v.headline)}
+                          className={`text-left p-3 rounded-lg border transition ${
+                            isActive
+                              ? "border-[var(--accent)] bg-[var(--accent)]/5"
+                              : "border-[var(--divider)] hover:border-[var(--muted)] bg-white"
+                          }`}
+                        >
+                          <p className="text-base font-bold mb-1" style={{ fontFamily: "Georgia, serif" }}>
+                            {v.headline}
+                          </p>
+                          <p className="text-xs text-[var(--muted)]">{v.rationale}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2">
