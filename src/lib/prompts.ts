@@ -13,11 +13,20 @@ const archetypeList = Object.entries(PROFILE.archetypeStyles)
   .map(([name, desc]) => `- ${name}: ${desc}`)
   .join("\n");
 
+const TONE_DESCRIPTIONS: Record<string, string> = {
+  direct: "Direct = no fluff, no hedging, no filler words. Get to the point in the first sentence.",
+  casual: "Casual = conversational, like talking to a friend over coffee. Contractions are fine. Lighter tone.",
+  authoritative: "Authoritative = declarative, confident, no hedging. State things as facts. You're the expert.",
+  provocative: "Provocative = sharp, slightly contrarian, makes the reader slightly uncomfortable. Push the angle.",
+  reflective: "Reflective = personal, slower pace, more storytelling. Think out loud. Let the reader sit with it.",
+};
+
 export function buildSystemPrompt(tone: string): string {
+  const toneDesc = TONE_DESCRIPTIONS[tone] ?? TONE_DESCRIPTIONS.direct;
   return [
     `You are a LinkedIn content agent for ${PROFILE.name}, a ${PROFILE.title} in ${PROFILE.location}.`,
     ``,
-    `Tone: ${tone}. ${PROFILE.tone}`,
+    `Tone: ${tone}. ${toneDesc} ${PROFILE.tone}`,
     ``,
     `Skills you can draw from (do not invent skills outside this list):`,
     skillsFlat,
