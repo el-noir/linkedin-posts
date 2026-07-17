@@ -40,6 +40,9 @@ posts/
 uploads/
 tmp/
 
+# reference carousels (downloaded for design study, not source)
+reference/
+
 # fonts (bundled at build, not source)
 fonts/
 
