@@ -44,16 +44,34 @@ export function buildSystemPrompt(tone: string): string {
 export function buildUserPrompt(input: GenerateInput, recentTopics: string[]): string {
   const archetypeLine =
     input.archetype === "auto"
-      ? `Archetype: you pick — choose the one that best fits the scenario.`
-      : `Archetype: ${input.archetype} (forced — write in this style even if the scenario fits another archetype better).`;
+      ? `Archetype: you pick — choose the one that best fits the material.`
+      : `Archetype: ${input.archetype} (forced — write in this style even if the material fits another archetype better).`;
 
   const recentLine =
     recentTopics.length > 0
       ? `Avoid these recent topics (I've already written about them): ${recentTopics.join("; ")}.`
       : `No recent topics to avoid — this is the first post.`;
 
+  // Mode-specific instruction
+  const modeInstruction =
+    input.mode === "content"
+      ? [
+          `MODE: CONTENT EXTRACTION`,
+          `The text below is source content. Turn it into a carousel — do NOT invent new ideas, do NOT add information that isn't in the source. Your job is to extract, structure, and sharpen what's already there.`,
+          `If the content is long, distill it to the ${input.slideCount} strongest ideas. If it's short, expand each idea into a slide with context the author would obviously agree with — but stay faithful to the source.`,
+          `Keep the author's original framing and opinions. Don't soften or contradict them.`,
+          ``,
+          `SOURCE CONTENT:`,
+          input.scenario,
+        ].join("\n")
+      : [
+          `MODE: SCENARIO`,
+          `Scenario: ${input.scenario}`,
+          `You write the content from scratch, in my voice, using the archetype style.`,
+        ].join("\n");
+
   return [
-    `Scenario: ${input.scenario}`,
+    modeInstruction,
     ``,
     archetypeLine,
     recentLine,
@@ -67,7 +85,7 @@ export function buildUserPrompt(input: GenerateInput, recentTopics: string[]): s
     ``,
     `Also write a 3-4 line caption for the LinkedIn post body (the teaser that makes people swipe the carousel). End the caption with an arrow pointing down: ↓`,
     ``,
-    `Set the "field" to whichever of my fields (${PROFILE.fields.join(", ")}) best fits the scenario, even if it's a stretch.`,
+    `Set the "field" to whichever of my fields (${PROFILE.fields.join(", ")}) best fits, even if it's a stretch.`,
     `Set the "archetype" to whichever archetype you actually used.`,
     `Set the "topic" to a short specific topic label (e.g. "N+1 query problem", "first CTF lessons").`,
     ``,

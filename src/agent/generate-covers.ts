@@ -29,14 +29,19 @@ export async function generateCovers(
   scenario: string,
   archetype: Archetype,
   tone: Tone,
+  mode: "scenario" | "content" = "scenario",
 ): Promise<Result<CoverVariants>> {
   const client = createAnthropicClient();
   const model = getModel("zai-org/GLM-5.2");
 
   const archetypeLine =
     archetype === "auto"
-      ? "Pick the archetype that best fits the scenario before writing covers."
+      ? "Pick the archetype that best fits the material before writing covers."
       : `Archetype: ${archetype} (forced).`;
+
+  const sourceLine = mode === "content"
+    ? `Source content (extract hooks from this — don't invent ideas not in the text):\n${scenario}`
+    : `Scenario: ${scenario}`;
 
   const system = [
     `You are a LinkedIn hook writer for ${PROFILE.name}, a ${PROFILE.title}.`,
@@ -47,7 +52,7 @@ export async function generateCovers(
   ].join("\n");
 
   const user = [
-    `Scenario: ${scenario}`,
+    sourceLine,
     archetypeLine,
     ``,
     `Write 3 cover headline variants for a LinkedIn carousel.`,

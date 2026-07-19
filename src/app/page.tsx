@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import type { Post, Slide, GenerateInput, Archetype, Tone } from "@/lib/types";
-import { ARCHETYPES, TONES } from "@/lib/types";
+import type { Post, Slide, GenerateInput, Archetype, Tone, InputMode } from "@/lib/types";
+import { ARCHETYPES, TONES, INPUT_MODES } from "@/lib/types";
 import type { CoverVariants } from "@/agent/generate-covers";
 import type { CoverScore } from "@/agent/score-cover";
 
@@ -38,7 +38,15 @@ const SCENARIO_PLACEHOLDERS = [
   "how I debugged a 3-day mystery bug",
 ];
 
+const CONTENT_PLACEHOLDER = "Paste the content you want to turn into a carousel — an article, notes, a draft, a thread, a blog post. The agent will extract the key ideas and structure them into slides without inventing new content.";
+
+const MODE_LABELS: Record<InputMode, string> = {
+  scenario: "Scenario — describe what to post about",
+  content: "Content — paste text to turn into a carousel",
+};
+
 export default function HomePage() {
+  const [mode, setMode] = useState<InputMode>("scenario");
   const [scenario, setScenario] = useState("");
   const [archetype, setArchetype] = useState<Archetype>("auto");
   const [tone, setTone] = useState<Tone>("direct");
@@ -71,7 +79,7 @@ export default function HomePage() {
 
   const handleGenerate = async () => {
     if (scenario.trim().length < 5) {
-      setError("Scenario must be at least 5 characters.");
+      setError(mode === "content" ? "Content must be at least 5 characters." : "Scenario must be at least 5 characters.");
       return;
     }
     setLoading(true);
@@ -81,13 +89,13 @@ export default function HomePage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenario, archetype, tone, slideCount } satisfies GenerateInput),
+        body: JSON.stringify({ mode, scenario, archetype, tone, slideCount } satisfies GenerateInput),
       });
       const data = await res.json();
       if (data.ok) {
         setPost(data.data);
         loadHistory();
-        fetchCovers(scenario, archetype, tone);
+        fetchCovers(scenario, archetype, tone, mode);
         fetchScore(data.data.slides[0]?.headline ?? "");
       } else {
         setError(data.error || "Generation failed");
@@ -99,13 +107,13 @@ export default function HomePage() {
     }
   };
 
-  const fetchCovers = async (scn: string, arch: Archetype, tn: Tone) => {
+  const fetchCovers = async (scn: string, arch: Archetype, tn: Tone, md: InputMode = mode) => {
     setCoversLoading(true);
     try {
       const res = await fetch("/api/covers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenario: scn, archetype: arch, tone: tn }),
+        body: JSON.stringify({ scenario: scn, archetype: arch, tone: tn, mode: md }),
       });
       const data = await res.json();
       if (data.ok) {
@@ -214,7 +222,8 @@ export default function HomePage() {
     setPost(p);
   };
 
-  const placeholder = SCENARIO_PLACEHOLDERS[new Date().getDate() % SCENARIO_PLACEHOLDERS.length];
+  const placeholder = mode === "content" ? CONTENT_PLACEHOLDER : SCENARIO_PLACEHOLDERS[new Date().getDate() % SCENARIO_PLACEHOLDERS.length];
+  const charLimit = mode === "content" ? 2000 : 500;
 
   return (
     <div className="min-h-screen flex">
@@ -222,23 +231,46 @@ export default function HomePage() {
       <aside className="w-80 border-r border-[var(--divider)] p-6 flex flex-col gap-6 overflow-y-auto h-screen sticky top-0">
         <div>
           <h1 className="text-xl font-bold mb-1">LinkedIn Post Agent</h1>
-          <p className="text-sm text-[var(--muted)]">Describe a scenario. Get a carousel.</p>
+          <p className="text-sm text-[var(--muted)]">Describe a scenario or paste content. Get a carousel.</p>
         </div>
 
         <div className="flex flex-col gap-4">
+          {/* Mode toggle */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2">
-              Scenario
+              Input mode
+            </label>
+            <div className="flex gap-2">
+              {INPUT_MODES.map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  className={`flex-1 py-2 px-2 rounded-md text-xs font-medium border transition ${
+                    mode === m
+                      ? "bg-[var(--text)] text-[var(--bg)] border-[var(--text)]"
+                      : "bg-white border-[var(--divider)] hover:border-[var(--muted)]"
+                  }`}
+                >
+                  {m === "scenario" ? "Scenario" : "Content"}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-[var(--muted)] mt-1">{MODE_LABELS[mode]}</p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2">
+              {mode === "content" ? "Content" : "Scenario"}
             </label>
             <textarea
               value={scenario}
               onChange={(e) => setScenario(e.target.value)}
               placeholder={placeholder}
-              rows={5}
+              rows={mode === "content" ? 10 : 5}
               className="w-full border border-[var(--divider)] rounded-md px-3 py-2 text-sm bg-white resize-y"
             />
             <p className="text-xs text-[var(--muted)] mt-1">
-              {scenario.length}/500 characters
+              {scenario.length}/{charLimit} characters
             </p>
           </div>
 
@@ -340,7 +372,7 @@ export default function HomePage() {
           <div className="flex flex-col items-center justify-center h-full text-center">
             <h2 className="text-2xl font-bold mb-2">No post yet</h2>
             <p className="text-[var(--muted)]">
-              Describe a scenario on the left, pick an archetype, and click Generate.
+              Describe a scenario or paste content on the left, pick an archetype, and click Generate.
             </p>
           </div>
         ) : (

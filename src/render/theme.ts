@@ -1,26 +1,23 @@
-// The v6 design — palette, fonts, layout. Baked into the renderer.
-// This is the source of truth: the PIL mockup and the @react-pdf renderer
-// both read from these constants. Edit here to change the design.
+// The W4 brand identity — cream + teal, baked into the renderer.
+// Signature: teal sidebar on left edge + teal "M" monogram top-right.
+// This is the source of truth for the design.
 
 import { Font } from "@react-pdf/renderer";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Resolve fonts dir relative to THIS file at runtime.
-// __dirname doesn't exist in ESM; derive it from import.meta.url.
-// This is the only reliable way to find bundled assets in Next.js.
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 const FONTS_DIR = [
-  path.join(HERE, "fonts"),                           // src/render/fonts (same dir as theme.ts)
-  path.join(process.cwd(), "src", "render", "fonts"), // fallback: CWD
+  path.join(HERE, "fonts"),
+  path.join(process.cwd(), "src", "render", "fonts"),
 ].find((p) => existsSync(p)) ?? path.join(HERE, "fonts");
 
-// Register fonts once. Fraunces (serif) for headlines, Inter (sans) for body/labels.
+// Space Grotesk (headlines) + Inter (body/labels) — clean, modern, distinctive
 Font.register({
-  family: "Fraunces",
-  fonts: [{ src: path.join(FONTS_DIR, "Fraunces-Bold.ttf"), fontWeight: "bold" }],
+  family: "SpaceGrotesk",
+  fonts: [{ src: path.join(FONTS_DIR, "SpaceGrotesk-Bold.ttf"), fontWeight: "bold" }],
 });
 
 Font.register({
@@ -31,25 +28,22 @@ Font.register({
   ],
 });
 
+// Disable hyphenation — @react-pdf/renderer auto-hyphenates words that don't fit
+// a line, which breaks words like "production" into "pro-duction". We want words
+// to wrap whole, never split with hyphens.
+Font.registerHyphenationCallback((word) => [word]);
+
+// W4 palette — warm cream + deep teal (from v6_slide_5 analysis)
 export const PALETTE = {
-  bg: "#FAF8F3", // warm cream
-  text: "#1F1B16", // warm near-black
-  muted: "#6E665B", // warm gray
-  divider: "#E8E1D4", // warm hairline
+  bg: "#F9F7F2",       // warm cream
+  text: "#1D1A15",     // warm near-black
+  muted: "#67625B",     // warm gray
+  divider: "#E1DED7",  // warm hairline
+  accent: "#166B6B",   // deep teal (the brand color)
 } as const;
 
-// Color-coded section accents — one per slide. Color = navigation.
-export const SECTION_COLORS = [
-  "#A0502E", // burnt sienna (cover)
-  "#B8860B", // deep gold (problem)
-  "#6B3D8B", // plum (context)
-  "#1E6343", // forest green (fix 1)
-  "#166B6B", // deep teal (fix 2)
-  "#8B2C38", // oxblood (lesson)
-] as const;
-
 export const FONTS = {
-  headline: "Fraunces",
+  headline: "SpaceGrotesk",
   body: "Inter",
 } as const;
 
@@ -57,9 +51,8 @@ export const LAYOUT = {
   width: 1080,
   height: 1350,
   margin: 72,
-  contentW: 936, // 1080 - 2*72
-  progressBarY: 50,
-  progressBarH: 3,
+  contentW: 936,
+  sidebarW: 8,          // teal sidebar width (the signature)
   headerY: 130,
   headlineY: 320,
   gapHeadRule: 40,
@@ -75,7 +68,8 @@ export const FOOTER = {
   title: "Full-Stack & AI Engineer",
 } as const;
 
-// Pick a section color by slide index (cycles if more slides than colors).
-export function sectionColor(idx: number): string {
-  return SECTION_COLORS[idx % SECTION_COLORS.length];
+// W4 uses a single accent color (teal) — no per-slide color coding.
+// Keeping this function for compatibility but it always returns teal.
+export function sectionColor(_idx: number): string {
+  return PALETTE.accent;
 }

@@ -10,9 +10,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const InputSchema = z.object({
-  scenario: z.string().min(5).max(500),
+  scenario: z.string().min(5).max(2000),
   archetype: z.enum(["auto", "problem-solution", "story-lesson", "contrarian", "listicle", "myth-busting", "behind-the-scenes"]).default("auto"),
   tone: z.enum(["direct", "casual", "authoritative", "provocative", "reflective"]).default("direct"),
+  mode: z.enum(["scenario", "content"]).default("scenario"),
 });
 
 export async function POST(req: Request) {
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const result = await generateCovers(parsed.data.scenario, parsed.data.archetype, parsed.data.tone);
+  const result = await generateCovers(parsed.data.scenario, parsed.data.archetype, parsed.data.tone, parsed.data.mode);
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 500 });
   }

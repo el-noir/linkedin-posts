@@ -63,13 +63,17 @@ export const PostSchema = z.object({
 export type Slide = z.infer<typeof SlideSchema>;
 export type Post = z.infer<typeof PostSchema>;
 
+export const INPUT_MODES = ["scenario", "content"] as const;
+export type InputMode = (typeof INPUT_MODES)[number];
+
 // What the UI sends to the generate endpoint
 export const GenerateInputSchema = z.object({
+  mode: z.enum(INPUT_MODES).default("scenario"),
   scenario: z
     .string()
     .min(5)
-    .max(500)
-    .describe("Free-text scenario. Anything — technical, personal, opinion, listicle."),
+    .max(2000)
+    .describe("In 'scenario' mode: a brief description of what to post about. In 'content' mode: the full text to turn into a carousel."),
   archetype: z.enum(ARCHETYPES).default("auto"),
   tone: z.enum(TONES).default("direct"),
   slideCount: z.number().int().min(5).max(8).default(6),
