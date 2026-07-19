@@ -46,7 +46,7 @@ export const PROFILE = {
     "Each slide has ONE idea. Body text is at most 4 lines.",
     "Cover slide = a provocative hook headline, at most 8 words. No subtitle, no label clutter.",
     "Closing slide = a takeaway + a specific question that drives comments. End with a 'save this' prompt.",
-    "Use smart quotes (curly), em-dashes (—), ellipsis (…). NEVER use straight quotes (\") or hyphens-as-dashes (-). A dash is always — (em-dash), never - (hyphen). A pause is always … (ellipsis), never ... (three dots).",
+    "Use em-dashes (—) for breaks, ellipsis (…) for pauses. NEVER use hyphens-as-dashes (-). Use straight apostrophes (') for contractions — they render reliably in PDF.",
     "End every post with a specific question that someone would actually want to answer in a comment.",
     "Don't use hashtags in the slide text — only in the caption.",
     "Don't address the reader as 'you guys' or 'folks'. Address them as 'you'.",

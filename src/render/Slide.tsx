@@ -5,14 +5,13 @@ import { Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import { PALETTE, FONTS, LAYOUT, FOOTER } from "./theme";
 import type { Slide } from "@/lib/types";
 
-// Sanitize text: convert hyphens to em-dashes, straight quotes to smart quotes.
-// GLM sometimes returns hyphens-as-dashes and straight quotes despite instructions.
+// Sanitize text: convert hyphens to em-dashes and three-dots to ellipsis.
+// Do NOT convert quotes/apostrophes — the bundled font subset may not have
+// curly quote glyphs, which causes them to render as $ or blank in the PDF.
+// GLM returns straight quotes which render fine as-is.
 function sanitize(text: string): string {
   return text
     .replace(/ - /g, " — ")        // spaced hyphen → em-dash
-    .replace(/"([^"]+)"/g, "\u201C$1\u201D")  // straight double quotes → curly
-    .replace(/'([^']+)'/g, "\u2018$1\u2019")  // straight single quotes → curly
-    .replace(/'/g, "\u2019")       // apostrophes
     .replace(/\.\.\./g, "…");      // three dots → ellipsis
 }
 
